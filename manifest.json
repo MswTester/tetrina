@@ -31,6 +31,7 @@
         "storage",
         "tabs",
         "scripting",
-        "activeTab"
+        "activeTab",
+        "pageCapture"
     ]
   }
