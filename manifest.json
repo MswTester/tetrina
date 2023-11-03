@@ -1,0 +1,36 @@
+{
+    "manifest_version": 3,
+    "name": "Tetrina",
+    "version": "1.0",
+    "description": "Extension package for Tetr.io",
+    "icons":{
+        "16": "images/16.png",
+        "32": "images/32.png",
+        "48": "images/48.png",
+        "128": "images/128.png"
+    },
+    "content_scripts":[
+        {
+            "js":["scripts/content.js", "scripts/languages.js"],
+            "matches":["https://tetr.io/*"],
+            "css":["styles/content.css"]
+        }
+    ],
+    "action": {
+        "default_icon": {
+            "16": "images/16.png",
+            "32": "images/32.png",
+            "48": "images/48.png",
+            "128": "images/128.png"
+        }
+    },
+    "background": {
+        "service_worker": "scripts/background.js"
+    },
+    "permissions": [
+        "storage",
+        "tabs",
+        "scripting",
+        "activeTab"
+    ]
+  }
