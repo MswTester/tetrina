@@ -28,10 +28,9 @@
         "service_worker": "scripts/background.js"
     },
     "permissions": [
-        "storage",
-        "tabs",
-        "scripting",
         "activeTab",
-        "pageCapture"
+        "storage",
+        "scripting",
+        "tabs"
     ]
   }
