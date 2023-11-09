@@ -1,13 +1,66 @@
-const color = document.createElement('input');
-color.type = 'color';
-color.style.position = 'fixed';
-color.style.top = '0px';
-color.style.left = '0px';
+let gap = 55;
+let zenLeft = 934;
+let sprintLeft = 950;
+const sdSpeed = 50;
+let hdSpeed = 40;
+let left = zenLeft || sprintLeft;
+let height = 380;
+
+const speed = document.createElement('input');
+speed.value = hdSpeed;
+speed.style.position = 'fixed';
+speed.style.top = '0px';
+speed.style.right = '0px';
+speed.addEventListener('change', (e) => {
+    hdSpeed = +(e.target.value)
+})
+
+const zen = document.createElement('input');
+zen.value = zenLeft;
+zen.style.position = 'fixed';
+zen.style.top = '20px';
+zen.style.right = '0px';
+zen.addEventListener('change', (e) => {
+    zenLeft = +(e.target.value)
+    initNexts()
+})
+
+const sprint = document.createElement('input');
+sprint.value = sprintLeft;
+sprint.style.position = 'fixed';
+sprint.style.top = '40px';
+sprint.style.right = '0px';
+sprint.addEventListener('change', (e) => {
+    sprintLeft = +(e.target.value)
+    initNexts()
+})
+
+const gapInput = document.createElement('input');
+gapInput.value = gap;
+gapInput.style.position = 'fixed';
+gapInput.style.top = '60px';
+gapInput.style.right = '0px';
+gapInput.addEventListener('change', (e) => {
+    gap = +(e.target.value)
+    initNexts()
+})
+
+const heightInput = document.createElement('input');
+heightInput.value = height;
+heightInput.style.position = 'fixed';
+heightInput.style.top = '80px';
+heightInput.style.right = '0px';
+heightInput.addEventListener('change', (e) => {
+    height = +(e.target.value)
+    initNexts()
+})
 
 const textarea = document.createElement('textarea');
 textarea.style.position = 'fixed';
-textarea.style.top = '0px';
+textarea.style.top = '300px';
 textarea.style.left = '0px';
+textarea.cols = 6;
+textarea.height = 100;
 
 const canvas = document.getElementById('pixi');
 const chat = document.getElementById('ingame_chat_container');
@@ -20,23 +73,31 @@ preview.style.position = 'fixed';
 preview.style.top = '0px';
 preview.style.left = '0px';
 preview.style.width = '150px';
-preview.style.height = '700px';
+preview.style.height = `${gap*5}px`;
 preview.width = 150;
-preview.height = 700;
+preview.height = gap*5;
 const video = document.createElement('video');
 const body = document.body;
+body.appendChild(speed);
+body.appendChild(zen);
+body.appendChild(sprint);
+body.appendChild(gapInput);
+body.appendChild(heightInput);
 body.appendChild(preview);
+body.appendChild(textarea);
 let ingame_chat;
 
-let gap = 57;
-let height = 378;
-let hold = [593, height]
 let nexts = []
-for(let i = 0; i < 5; i++){
-    nexts.push([945, height + gap * i])
+function initNexts(){
+    nexts = []
+    for(let i = 0; i < 5; i++){
+        nexts.push([left, height + Math.round(gap * i)])
+    }
 }
+initNexts()
 
 let stat = 1
+let ingame = false
 let captureStream = null
 const offsetPos = {
     x:0,
@@ -54,7 +115,6 @@ const observer = new MutationObserver((mutlist, obs) => {
         }
         if(isBodyStatus('ingame_phys') && isBodyStatus('ingame') && stat != 2){
             stat = 2
-            initGame()
         }
     }
 })
@@ -68,7 +128,6 @@ function isBodyStatus(statusName){
 function resize(){
     c1.width = innerWidth;
     c1.height = innerHeight;
-    console.log(c1.width, c1.height)
 }
 window.onresize = resize;
 resize()
@@ -78,7 +137,6 @@ function rgbToHex(r, g, b) {
 }
 
 function setColor(e){
-    console.log(e.clientX, e.clientY)
     const rgb = ctx1.getImageData(e.clientX, e.clientY, 1, 1).data
     color.value = rgbToHex(rgb[0], rgb[1], rgb[2])
 }
@@ -88,34 +146,789 @@ function getColor(x, y){
     return rgbToHex(rgb[0], rgb[1], rgb[2])
 }
 
+const keys = {
+    "moveLeft":"Comma",
+    "moveRight":"Slash",
+    "softDrop":"Period",
+    "hardDrop":"Space",
+    "rotateOtherclock":"KeyA",
+    "rotateClock":"KeyD",
+    "rotate180":"KeyS",
+    "hold":"KeyC"
+}
+
+const minoColorMap = {
+    'b44': 'z',
+    'b34': 'z',
+    'b33': 'z',
+    '8b3': 's',
+    '8b4': 's',
+    '9c4': 's',
+    'a49': 't',
+    'b63': 'l',
+    'b64': 'l',
+    'c74': 'l',
+    'b73': 'l',
+    '54a': 'j',
+    '65b': 'j',
+    'db5': 'o',
+    'cb5': 'o',
+    'cb4': 'o',
+    'ca4': 'o',
+    '5da': 'i',
+    '4da': 'i',
+    '4c9': 'i',
+    '4b9': 'i',
+}
+
 function initGame(){
-    console.log(Math.min(canvas.clientWidth, canvas.clientHeight * 1.65))
+    // console.log(Math.min(canvas.clientWidth, canvas.clientHeight * 1.65))
+    let varRoute = ''
+    let build = ''
+    let varRoof = false
+    let cur = ''
+    let hold = ''
+    let prevNexts = []
+    let placedMinos = []
+    let actionQueue = []
     resize()
     const loop = () => {
-        if(stat === 2){
+        if(ingame){
             ctx1.drawImage(video, 0+offsetPos.x, 0+offsetPos.y, c1.width, c1.height);
-            const holdColor = getColor(hold[0], hold[1])
             const nextColors = nexts.map(next => getColor(next[0], next[1]))
-            ctx2.clearRect(0, 0, preview.width, preview.height);
-            let holdImg = ctx1.getImageData(hold[0]-75, hold[1]-50, 150, 100)
-            ctx2.putImageData(holdImg, 0, 0);
-            ctx2.fillStyle = 'red';
-            ctx2.fillRect(75, 50, 3, 3);
-            nexts.forEach((next, i) => {
-                let nextImg = ctx1.getImageData(next[0]-75, next[1]-50, 150, 100)
-                ctx2.putImageData(nextImg, 0, 100 + gap * i);
-                ctx2.fillRect(75, 150 + gap*i, 3, 3);
-            })
+            const nextMinos = nextColors.map(v => minoColorMap[v[1]+v[3]+v[5]])
+            const nextViews = nextColors.map(v => `${minoColorMap[v[1]+v[3]+v[5]]} ${v[1]+v[3]+v[5]}`)
+
+            // write placed minos
+            textarea.value = nextViews.join('\n')
+
+            if(nextMinos.join('') !== prevNexts.join('')){
+                // update placed minos
+                cur = prevNexts[0]
+                prevNexts = nextMinos
+
+    
+                // draw nexts
+                ctx2.clearRect(0, 0, preview.width, preview.height);
+                nexts.forEach((next, i) => {
+                    let nextImg = ctx1.getImageData(next[0]-75, next[1]-(gap/2), 150, gap)
+                    ctx2.putImageData(nextImg, 0, gap * i);
+                    ctx2.fillRect(75, gap/2 + gap*i, 2, 2);
+                })
+
+                // check build possibility
+                if(placedMinos.length === 0) switch(true){
+                    case !(findNextsIdx(nextMinos, 't') < findNextsIdx(nextMinos, 'o') && findNextsIdx(nextMinos, 's') < findNextsIdx(nextMinos, 'o')): build = 'sdpc'; break;
+                    case !(findNextsIdx(nextMinos, 'l') < findNextsIdx(nextMinos, 't') && findNextsIdx(nextMinos, 's') < findNextsIdx(nextMinos, 'l')): build = 'tfac'; break;
+                }
+
+                // start build
+                switch(build){
+                    case 'sdpc': sdpcPattern(nextMinos); break;
+                    case 'tfac': tfacPattern(nextMinos); break;
+                    case 'dpc': dpc(nextMinos); break;
+                }
+            }
             setTimeout(loop, 1000 / 60); // drawing at 60fps
         }
     }
     loop() // start the drawing loop.
+    const actionLoop = () => {
+        if(ingame){
+            if(actionQueue.length === 0) return setTimeout(actionLoop, 10)
+            const action = actionQueue.shift()
+            action.type === 'tap' ? keyTap(action.keytype) : action.type === 'press' ? pressKey(action.keytype) : releaseKey(action.keytype)
+            const delay = action.type === 'press' ? sdSpeed : hdSpeed
+            setTimeout(actionLoop, delay)
+        }
+    }
+    actionLoop()
+
+    function findNextsIdx(nexts, mino, onlyNext = false){
+        return onlyNext ? nexts.indexOf(mino) === -1 ? 99 : nexts.indexOf(mino) : cur === mino || hold === mino ? -1 : nexts.indexOf(mino) === -1 ? 99 : nexts.indexOf(mino)
+    }
+
+    function sdpcPattern(nexts){
+        const bag = Math.floor(placedMinos.length / 7) % 5
+        const bagIndex = placedMinos.length % 7
+        switch(bag){
+            case 0:
+                switch(cur){
+                    case 't':
+                        if(bagIndex === 6){
+                            addQueue('press', 'softDrop')
+                            addQueue('release', 'softDrop')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'rotate180')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('t')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'z':
+                        if(bag >= placedCount('z')){
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('z')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 's':
+                        if(bag >= placedCount('s')){
+                            if(placedCount('o') >= 1){
+                                addQueue('tap', 'rotateClock')
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('s')
+                            } else {
+                                doHold()
+                            }
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'o':
+                        if(bag >= placedCount('o')){
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('o')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'i':
+                        if(bag >= placedCount('i')){
+                            addQueue('tap', 'rotateOtherclock')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('i')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'l':
+                        if(bag >= placedCount('l')){
+                            if(placedCount('j') >= 1){
+                                if(placedCount('z') >= 1){
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('press', 'softDrop')
+                                    addQueue('release', 'softDrop')
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('l')
+                                } else {
+                                    addQueue('tap', 'rotate180')
+                                    addQueue('press', 'softDrop')
+                                    addQueue('release', 'softDrop')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('l')
+                                }
+                            } else {
+                                addQueue('tap', 'rotateClock')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('l')
+                            }
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'j':
+                        if(bag >= placedCount('j')){
+                            if(placedCount('l') >= 1){
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('j')
+                            } else {
+                                addQueue('tap', 'rotateClock')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('j')
+                            }
+                        } else {
+                            doHold()
+                        }
+                        break;
+                }
+                break;
+            case 1:
+                switch(cur){
+                    case 't':
+                        if(bagIndex === 6){
+                            addQueue('tap', 'rotateOtherclock')
+                            addQueue('tap', 'moveRight')
+                            addQueue('press', 'softDrop')
+                            addQueue('release', 'softDrop')
+                            addQueue('tap', 'rotateOtherclock')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('t')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'z':
+                        if(bag >= placedCount('z')){
+                            if(placedCount('j') > placedCount('z')){
+                                addQueue('tap', 'rotateClock')
+                                addQueue('press', 'softDrop')
+                                addQueue('release', 'softDrop')
+                                addQueue('tap', 'rotateClock')
+                            }
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('z')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 's':
+                        if(bag >= placedCount('s')){
+                            addQueue('tap', 'rotateClock')
+                            addQueue('tap', 'moveRight')
+                            if(placedCount('o') > placedCount('s')){
+                                addQueue('press', 'softDrop')
+                                addQueue('release', 'softDrop')
+                            }
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('s')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'o':
+                        if(bag >= placedCount('o')){
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('o')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'i':
+                        if(bag >= placedCount('i')){
+                            addQueue('tap', 'rotateClock')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('i')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'l':
+                        if(bag >= placedCount('l')){
+                            addQueue('tap', 'rotate180')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('l')
+                        } else {
+                            doHold()
+                        }
+                        break;
+                    case 'j':
+                        if(bag >= placedCount('j')){
+                            if(placedCount('l') > placedCount('j')){
+                                if(placedCount('z') > placedCount('j')){
+                                    addQueue('press', 'softDrop')
+                                    addQueue('release', 'softDrop')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('j')
+                                } else {
+                                    if(placedCount('s') > placedCount('j')){
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        addQueue('tap', 'rotate180')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('j')
+                                    } else {
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('j')
+                                    }
+                                }
+                            } else {
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('j')
+                            }
+                        } else {
+                            doHold()
+                        }
+                        break;
+                }
+                break;
+            case 2:
+                if(bagIndex === 6) {
+                    varRoof = false
+                    varRoute = ''
+                    build = 'dpc'
+                    dpc(nexts)
+                }else {
+                    if(varRoute === ''){
+                        if(findNextsIdx(nexts, 'j') < findNextsIdx(nexts, 'l')){
+                            varRoute = 'j'
+                        } else {
+                            varRoute = 'l'
+                        }
+                    }
+                    if(cur === 'o'){
+                        addQueue('tap', 'moveLeft')
+                        addQueue('tap', 'moveLeft')
+                        addQueue('tap', 'moveLeft')
+                        addQueue('tap', 'moveLeft')
+                        addQueue('tap', 'hardDrop')
+                        placedMinos.push('o')
+                    } else if((cur === 't' || hold === 't') && !varRoof){
+                        if(hold === 't') doHold(true)
+                        addQueue('tap', 'rotateClock')
+                        addQueue('tap', 'moveLeft')
+                        addQueue('press', 'softDrop')
+                        addQueue('release', 'softDrop')
+                        addQueue('tap', 'rotateClock')
+                        addQueue('tap', 'hardDrop')
+                        placedMinos.push('t')
+                    } else if (cur === 't' && varRoof){
+                        if(bagIndex === 5){
+                            addQueue('tap', 'rotate180')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('t')
+                        } else {
+                            doHold()
+                        }
+                    } else if (cur === 'j'){
+                        if(varRoute === 'j'){
+                            if(placedCount('i') > placedCount('j')){
+                                addQueue('tap', 'rotateClock')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('press', 'softDrop')
+                                addQueue('tap', 'rotate180')
+                                addQueue('tap', 'rotate180')
+                                addQueue('release', 'softDrop')
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('j')
+                            } else {
+                                addQueue('tap', 'rotateClock')
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('j')
+                            }
+                        } else {
+                            if(placedCount('z') > placedCount('j')){
+                                addQueue('tap', 'rotate180')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('j')
+                            } else {
+                                doHold()
+                            }
+                        }
+                    } else if(cur === 'l'){
+                        if(varRoute === 'l'){
+                            addQueue('tap', 'rotate180')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('l')
+                        } else {
+                            if(findNextsIdx('z') < findNextsIdx('s')){
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('l')
+                            } else if (placedCount('s') > placedCount('l')){
+                                addQueue('tap', 'rotateOtherclock')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('l')
+                            } else if(placedCount('z') > placedCount('l')) {
+                                addQueue('tap', 'rotateOtherclock')
+                                addQueue('press', 'softDrop')
+                                addQueue('release', 'softDrop')
+                                addQueue('tap', 'rotateClock')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('l')
+                            } else {
+                                doHold()
+                            }
+                        }
+                    } else if(cur === 'i'){
+                        if(varRoute === 'l'){
+                            addQueue('tap', 'rotateClock')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('i')
+                        } else {
+                            if(placedCount('j') > placedCount('i')){
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('i')
+                            } else if ((hold === 'z' || (!varRoof && hold === 'l')) && placedCount('t') <= placedCount('i')){
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'moveRight')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('i')
+                            } else {
+                                doHold()
+                            }
+                        }
+                    } else if(cur === 's'){
+                        if(varRoute === 'j'){
+                            if(placedCount('t') > placedCount('s') || (!varRoof && hold === 'l')){
+                                if(placedCount('z') > placedCount('s')){
+                                    doHold()
+                                } else {
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('s')
+                                    varRoof = true
+                                }
+                            } else {
+                                doHold()
+                            }
+                        } else if(varRoute === 'l') {
+                            doHold()
+                        }
+                    } else if(cur === 'z'){
+                        if(varRoute === 'l'){
+                            if(placedCount('t') > placedCount('z') || hold === 's' || (!varRoof && hold === 'j')){
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('z')
+                                varRoof = true
+                            } else {
+                                doHold()
+                            }
+                        } else if(varRoute === 'j') {
+                            if(placedCount('j') > placedCount('z') && placedCount('t') <= placedCount('z') && !varRoof){
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('z')
+                                varRoof = true
+                            } else {
+                                doHold()
+                            }
+                        }
+                    }
+                }
+                break;
+        }
+    }
+    
+    function dpc(nexts, mino = hold){
+        const bag = Math.floor(placedMinos.length / 7)
+        const bagIndex = placedMinos.length % 7
+        switch(mino){
+            case 'z':
+                if(bag === 2) {
+                    varRoute = findNextsIdx(nexts, 'o') < findNextsIdx(nexts, 'z', true) || findNextsIdx(nexts, 'o') < findNextsIdx(nexts, 't', true) ? 'zoz' : 'zzo'
+                    doHold(true)
+                    if(varRoute === 'zoz'){
+                        addQueue('tap', 'rotateClock')
+                        addQueue('tap', 'moveRight')
+                        addQueue('tap', 'moveRight')
+                        addQueue('tap', 'moveRight')
+                        addQueue('tap', 'moveRight')
+                        addQueue('tap', 'hardDrop')
+                        placedMinos.push('z')
+                    } else {
+                        addQueue('tap', 'hardDrop')
+                        placedMinos.push('z')
+                    }
+                } else if(bag === 3) {
+                    switch(cur){
+                        case 'o':
+                            if(varRoute === 'zoz'){
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('z')
+                            } else {
+                                if(placedCount('z') > placedCount('o')){
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('z')
+                                } else {
+                                    doHold()
+                                }
+                            }
+                            break;
+                        case 's':
+                            if(varRoute === 'zoz'){
+                                if(placedCount('l') > placedCount('s')){
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('press', 'softDrop')
+                                    addQueue('release', 'softDrop')  
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('s')
+                                } else {
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('s')
+                                }
+                            } else {
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('s')
+                            }
+                            break;
+                        case 'z':
+                            if(placedCount('o') > placedCount('z')){
+                                addQueue('tap', 'rotateOtherclock')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('z')
+                            } else {
+                                doHold()
+                            }
+                            break;
+                        case 'i':
+                            addQueue('tap', 'rotateOtherclock')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('i')
+                            break;
+                        case 'l':
+                            addQueue('tap', 'rotateOtherclock')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('l')
+                            break;
+                        case 'j':
+                            addQueue('tap', 'rotateClock')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('j')
+                            break;
+                        case 't':
+                            if(bagIndex === 6){
+                                addQueue('tap', 'rotateClock')
+                                addQueue('tap', 'moveLeft')
+                                addQueue('press', 'softDrop')
+                                addQueue('release', 'softDrop')
+                                addQueue('tap', 'rotateClock')
+                                addQueue('tap', 'hardDrop')
+                                placedMinos.push('t')
+                            } else {
+                                doHold()
+                            }
+                            break;
+                    }
+                } else if(bag === 4){
+                    
+                }
+                break;
+        }
+    }
+
+    function tfacPattern(nexts){
+        const bag = Math.floor(placedMinos.length / 7)
+        const bagIndex = placedMinos.length % 7
+        switch(cur){
+            case 't':
+                if(placedCount('t') == 0){
+                    addQueue('tap', 'rotate180')
+                    addQueue('tap', 'moveRight')
+                    addQueue('tap', 'moveRight')
+                    addQueue('tap', 'moveRight')
+                    addQueue('tap', 'moveRight')
+                    addQueue('tap', 'hardDrop')
+                    placedMinos.push('t')
+                } else {
+                    // tspin
+                    if(placedCount('z') >= placedCount('t') && placedCount('s')  >= placedCount('t')){
+                        addQueue('tap', 'rotateOtherclock')
+                        addQueue('tap', 'moveRight')
+                        addQueue('tap', 'moveRight')
+                        addQueue('press', 'softDrop')
+                        addQueue('release', 'softDrop')
+                        addQueue('tap', 'rotateOtherclock')
+                        addQueue('tap', 'hardDrop')
+                        placedMinos.push('t')
+                    } else {
+                        doHold()
+                    }
+                }
+                break;
+            case 'z':
+                if(placedCount('o') > placedCount('z')){
+                    addQueue('tap', 'hardDrop')
+                    placedMinos.push('z')
+                } else {
+                    doHold()
+                }
+                break;
+            case 's':
+                if(placedMinos.includes('t')){
+                    if(placedCount('l') >= placedCount('s')){
+                        addQueue('tap', 'rotateClock')
+                        addQueue('tap', 'moveRight')
+                        addQueue('tap', 'moveRight')
+                        if(placedCount('l') > placedCount('s')){
+                            addQueue('press', 'softDrop')
+                            addQueue('release', 'softDrop')
+                        }
+                        addQueue('tap', 'moveRight')
+                        addQueue('tap', 'hardDrop')
+                        placedMinos.push('s')
+                    } else {
+                        doHold()
+                    }
+                } else {
+                    doHold()
+                }
+                break;
+            case 'o':
+                if(placedCount('z') >= placedCount('o')){
+                    addQueue('tap', 'moveLeft')
+                    if(placedCount('j') > placedCount('o')){
+                        addQueue('press', 'softDrop')
+                        addQueue('release', 'softDrop')
+                    }
+                    addQueue('tap', 'moveLeft')
+                    addQueue('tap', 'hardDrop')
+                    placedMinos.push('o')
+                } else {
+                    doHold()
+                }
+                break;
+            case 'i':
+                addQueue('tap', 'rotateOtherclock')
+                addQueue('tap', 'moveLeft')
+                addQueue('tap', 'moveLeft')
+                addQueue('tap', 'moveLeft')
+                addQueue('tap', 'moveLeft')
+                addQueue('tap', 'hardDrop')
+                placedMinos.push('i')
+                break;
+            case 'l':
+                if(placedMinos.includes('t')){
+                    addQueue('tap', 'rotateOtherclock')
+                    addQueue('tap', 'moveRight')
+                    addQueue('tap', 'moveRight')
+                    addQueue('tap', 'moveRight')
+                    addQueue('tap', 'moveRight')
+                    addQueue('tap', 'moveRight')
+                    addQueue('tap', 'hardDrop')
+                    placedMinos.push('l')
+                } else {
+                    doHold()
+                }
+                break;
+            case 'j':
+                addQueue('tap', 'rotateClock')
+                addQueue('tap', 'moveLeft')
+                addQueue('tap', 'moveLeft')
+                addQueue('tap', 'moveLeft')
+                addQueue('tap', 'hardDrop')
+                placedMinos.push('j')
+                break;
+        }
+    }
+
+    function placedCount(mino){
+        return placedMinos.filter(v => v === mino).length
+    }
+
+    function doHold(onlyHold = false){
+        const phold = `${hold}`
+        hold = cur
+        addQueue('tap', 'hold')
+        if(phold !== ''){
+            cur = phold
+            if(!onlyHold) {
+                switch(build){
+                    case 'sdpc': sdpcPattern(nexts); break;
+                    case 'tfac': tfacPattern(nexts); break;
+                    case 'dpc': dpc(nexts); break;
+                }
+            }
+        }
+    }
+
+    function addQueue(type, keytype){
+        actionQueue.push({type:type, keytype:keytype})
+    }
 }
+
+function pressKey(keytype){
+    document.body.dispatchEvent(new KeyboardEvent('keydown', {code: keys[keytype], bubbles:true}))
+}
+function releaseKey(keytype){
+    document.body.dispatchEvent(new KeyboardEvent('keyup', {code: keys[keytype], bubbles:true}))
+}
+function keyTap(keytype){
+    pressKey(keytype)
+    releaseKey(keytype)
+}
+
 
 // keybinds
 document.addEventListener('keydown', async (e) => {
-    if(e.code === 'KeyC'){
-        console.log(captureStream)
+    if(e.code === 'BracketLeft'){
+        console.log(left)
+        ingame = true
+        initGame()
+    } else if(e.code === 'BracketRight'){
+        ingame = false
+    } else if(e.code === 'Minus'){
+        left = zenLeft
+        initNexts()
+    } else if(e.code === 'Equal'){
+        left = sprintLeft
+        initNexts()
     }
 });
 
