@@ -1242,11 +1242,11 @@ function initGame(){
                                     if(placedCount('l') > placedCount('s') || placedCount('t') > placedCount('s')){
                                         if(firstInLastBag('l', 't') == 'l'){
                                             addQueue('tap', 'rotateOtherclock')
+                                            addQueue('tap', 'moveLeft')
                                             addQueue('tap', 'hardDrop')
                                             placedMinos.push('s')
                                         } else {
-                                            if(placedCount('s') > placedCount('s')){
-                                                addQueue('tap', 'moveLeft')
+                                            if(placedCount('z') > placedCount('s')){
                                                 if(placedCount('l') > placedCount('s')){
                                                     addQueue('tap', 'moveLeft')
                                                     addQueue('tap', 'rotateClock')
@@ -1420,7 +1420,7 @@ function initGame(){
     function firstInLastBag(mino1, mino2){
         const bag = Math.floor(placedMinos.length / 7)
         const bagIndex = placedMinos.length % 7
-        const reversed = [...placedMinos].reverse().slice(0, 7-bagIndex)
+        const reversed = [...placedMinos].reverse().slice(0, 7-bagIndex-1)
         const idx1 = reversed.findIndex(v => v === mino1)
         const idx2 = reversed.findIndex(v => v === mino2)
         console.log(idx1, idx2, mino1, mino2)
