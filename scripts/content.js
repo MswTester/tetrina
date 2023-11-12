@@ -1,10 +1,10 @@
-let gap = 55;
-let zenLeft = 934;
-let sprintLeft = 950;
+let gap = 55 || 60;
+let zenLeft = 934 || 952;
+let sprintLeft = 950 || 968;
 const sdSpeed = 50;
-let hdSpeed = 40;
+let hdSpeed = 36;
 let left = zenLeft || sprintLeft;
-let height = 380;
+let height = 380 || 392;
 
 const speed = document.createElement('input');
 speed.value = hdSpeed;
@@ -179,13 +179,23 @@ const minoColorMap = {
     '4da': 'i',
     '4c9': 'i',
     '4b9': 'i',
+
+    'c55':'z',
+    'cc5':'o',
+    '8c5':'s',
+    '65c':'j',
+    '5ca':'i',
+    'c5c':'t',
+    'c85':'l',
 }
 
 function initGame(){
     // console.log(Math.min(canvas.clientWidth, canvas.clientHeight * 1.65))
+    let varDir = ''
     let varRoute = ''
     let build = ''
     let varRoof = false
+    let varDpc = ''
     let cur = ''
     let hold = ''
     let prevNexts = []
@@ -207,7 +217,6 @@ function initGame(){
                 cur = prevNexts[0]
                 prevNexts = nextMinos
 
-    
                 // draw nexts
                 ctx2.clearRect(0, 0, preview.width, preview.height);
                 nexts.forEach((next, i) => {
@@ -658,118 +667,624 @@ function initGame(){
         }
     }
     
-    function dpc(nexts, mino = hold){
-        const bag = Math.floor(placedMinos.length / 7)
+    function dpc(nexts){
+        if(varDpc === '') varDpc = hold
+        const bag = Math.floor(placedMinos.length / 7) % 5
         const bagIndex = placedMinos.length % 7
-        switch(mino){
-            case 'z':
-                if(bag === 2) {
-                    varRoute = findNextsIdx(nexts, 'o') < findNextsIdx(nexts, 'z', true) || findNextsIdx(nexts, 'o') < findNextsIdx(nexts, 't', true) ? 'zoz' : 'zzo'
-                    doHold(true)
-                    if(varRoute === 'zoz'){
-                        addQueue('tap', 'rotateClock')
-                        addQueue('tap', 'moveRight')
-                        addQueue('tap', 'moveRight')
-                        addQueue('tap', 'moveRight')
-                        addQueue('tap', 'moveRight')
-                        addQueue('tap', 'hardDrop')
-                        placedMinos.push('z')
-                    } else {
-                        addQueue('tap', 'hardDrop')
-                        placedMinos.push('z')
-                    }
-                } else if(bag === 3) {
-                    switch(cur){
-                        case 'o':
-                            if(varRoute === 'zoz'){
-                                addQueue('tap', 'moveLeft')
-                                addQueue('tap', 'moveLeft')
-                                addQueue('tap', 'moveLeft')
-                                addQueue('tap', 'hardDrop')
-                                placedMinos.push('z')
-                            } else {
-                                if(placedCount('z') > placedCount('o')){
-                                    addQueue('tap', 'moveRight')
-                                    addQueue('tap', 'hardDrop')
-                                    placedMinos.push('z')
-                                } else {
-                                    doHold()
-                                }
-                            }
-                            break;
-                        case 's':
-                            if(varRoute === 'zoz'){
-                                if(placedCount('l') > placedCount('s')){
-                                    addQueue('tap', 'rotateOtherclock')
-                                    addQueue('press', 'softDrop')
-                                    addQueue('release', 'softDrop')  
-                                    addQueue('tap', 'rotateOtherclock')
-                                    addQueue('tap', 'hardDrop')
-                                    placedMinos.push('s')
-                                } else {
-                                    addQueue('tap', 'hardDrop')
-                                    placedMinos.push('s')
-                                }
-                            } else {
-                                addQueue('tap', 'moveLeft')
-                                addQueue('tap', 'moveLeft')
-                                addQueue('tap', 'hardDrop')
-                                placedMinos.push('s')
-                            }
-                            break;
-                        case 'z':
-                            if(placedCount('o') > placedCount('z')){
-                                addQueue('tap', 'rotateOtherclock')
-                                addQueue('tap', 'moveLeft')
-                                addQueue('tap', 'moveLeft')
-                                addQueue('tap', 'hardDrop')
-                                placedMinos.push('z')
-                            } else {
-                                doHold()
-                            }
-                            break;
-                        case 'i':
-                            addQueue('tap', 'rotateOtherclock')
-                            addQueue('tap', 'moveLeft')
-                            addQueue('tap', 'moveLeft')
-                            addQueue('tap', 'moveLeft')
-                            addQueue('tap', 'moveLeft')
-                            addQueue('tap', 'hardDrop')
-                            placedMinos.push('i')
-                            break;
-                        case 'l':
-                            addQueue('tap', 'rotateOtherclock')
-                            addQueue('tap', 'moveRight')
-                            addQueue('tap', 'moveRight')
-                            addQueue('tap', 'hardDrop')
-                            placedMinos.push('l')
-                            break;
-                        case 'j':
+        if(bag === 0){
+            varDpc = ''
+            varRoute = ''
+            varDir = ''
+            build = 'sdpc'
+            placedMinos = []
+            sdpcPattern(nexts)
+        } else {
+            switch(varDpc){
+                case 'z':
+                    if(bag === 2) {
+                        varRoute = (findNextsIdx(nexts, 'o') < findNextsIdx(nexts, 'z', true) || findNextsIdx(nexts, 'o') < findNextsIdx(nexts, 't', true)) ? 'zoz' : 'zzo'
+                        doHold(true)
+                        if(varRoute === 'zoz'){
                             addQueue('tap', 'rotateClock')
                             addQueue('tap', 'moveRight')
                             addQueue('tap', 'moveRight')
                             addQueue('tap', 'moveRight')
+                            addQueue('tap', 'moveRight')
                             addQueue('tap', 'hardDrop')
-                            placedMinos.push('j')
-                            break;
-                        case 't':
-                            if(bagIndex === 6){
-                                addQueue('tap', 'rotateClock')
-                                addQueue('tap', 'moveLeft')
-                                addQueue('press', 'softDrop')
-                                addQueue('release', 'softDrop')
-                                addQueue('tap', 'rotateClock')
-                                addQueue('tap', 'hardDrop')
-                                placedMinos.push('t')
-                            } else {
-                                doHold()
-                            }
-                            break;
+                            placedMinos.push('z')
+                        } else {
+                            addQueue('tap', 'hardDrop')
+                            placedMinos.push('z')
+                        }
+                    } else if(bag === 3) {
+                        switch(cur){
+                            case 'o':
+                                if(bag < placedCount('o')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('o')
+                                } else {
+                                    if(placedCount('z') > placedCount('o')){
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('o')
+                                    } else {
+                                        doHold()
+                                    }
+                                }
+                                break;
+                            case 's':
+                                if(bag < placedCount('s')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    if(placedCount('l') > placedCount('s')){
+                                        addQueue('tap', 'rotateOtherclock')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')  
+                                        addQueue('tap', 'rotateOtherclock')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('s')
+                                    } else {
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('s')
+                                    }
+                                } else {
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    if(placedCount('j') > placedCount('s')){
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        addQueue('tap', 'rotateClock')
+                                    }
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('s')
+                                }
+                                break;
+                            case 'z':
+                                if(bag < placedCount('z')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    if(placedCount('o') > placedCount('z')){
+                                        addQueue('tap', 'rotateOtherclock')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('z')
+                                    } else {
+                                        doHold()
+                                    }
+                                } else {
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('z')
+                                }
+                                break;
+                            case 'i':
+                                if(bag < placedCount('i')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('i')
+                                } else {
+                                    addQueue('tap', 'rotateClock')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('i')
+                                }
+                                break;
+                            case 'l':
+                                if(bag < placedCount('l')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('l')
+                                } else {
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    if(placedCount('z') > placedCount('l')){
+                                        addQueue('tap', 'moveRight')
+                                        if(placedCount('i') > placedCount('l')){addQueue('tap', 'rotateOtherclock')}
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        if(placedCount('i') > placedCount('l')){addQueue('tap', 'rotateClock')}
+                                        addQueue('tap', 'moveLeft')
+                                    }
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('l')
+                                }
+                                break;
+                            case 'j':
+                                if(bag < placedCount('j')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    addQueue('tap', 'rotateClock')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('j')
+                                } else {
+                                    addQueue('tap', 'rotateClock')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('j')
+                                }
+                                break;
+                            case 't':
+                                if(bagIndex === 6){
+                                    if(varRoute === 'zoz'){
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('t')
+                                    } else {
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('t')
+                                    }
+                                } else {
+                                    doHold()
+                                }
+                                break;
+                        }
+                    } else if(bag === 4){
+                        switch(cur){
+                            case 'o':
+                                if(bag < placedCount('o')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('o')
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 'l':
+                                if(bag < placedCount('l')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('l')
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 's':
+                                if(bag < placedCount('s')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    addQueue('tap', 'rotateClock')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('s')
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 't':
+                                if(bag < placedCount('t')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    if(placedCount('j') > placedCount('t')){
+                                        if(placedCount('z') > placedCount('t')){
+                                            addQueue('tap', 'rotate180')
+                                            addQueue('tap', 'moveRight')
+                                            addQueue('tap', 'hardDrop')
+                                            placedMinos.push('t')
+                                        } else {
+                                            doHold()
+                                        }
+                                    } else {
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('t')
+                                    }
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 'j':
+                                if(bag < placedCount('j')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    if(placedCount('t') > placedCount('j')){
+                                        addQueue('tap', 'rotate180')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('j')
+                                    } else {
+                                        addQueue('tap', 'rotateOtherclock')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('j')
+                                    }
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 'z':
+                                if(bag < placedCount('z')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    if(placedCount('j') > placedCount('z') || placedCount('t') > placedCount('z')){
+                                        if(firstInLastBag('j', 't') == 'j'){
+                                            addQueue('tap', 'rotateClock')
+                                            addQueue('tap', 'moveRight')
+                                            addQueue('tap', 'moveRight')
+                                            addQueue('tap', 'hardDrop')
+                                            placedMinos.push('z')
+                                        } else {
+                                            if(placedCount('s') > placedCount('z')){
+                                                addQueue('tap', 'moveRight')
+                                                if(placedCount('j') > placedCount('z')){
+                                                    addQueue('tap', 'moveRight')
+                                                    addQueue('tap', 'rotateOtherclock')
+                                                    addQueue('press', 'softDrop')
+                                                    addQueue('release', 'softDrop')
+                                                    addQueue('tap', 'rotateOtherclock')
+                                                }
+                                                addQueue('tap', 'hardDrop')
+                                                placedMinos.push('z')
+                                            } else {
+                                                doHold()
+                                            }
+                                        }
+                                    } else {
+                                        doHold()
+                                    }
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 'i':
+                                if(bag < placedCount('i')) return doHold()
+                                if(varRoute === 'zoz'){
+                                    addQueue('tap', 'rotateClock')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('i')
+                                } else {
+                                    //
+                                }
+                                break;
+                        }
                     }
-                } else if(bag === 4){
-                    
-                }
-                break;
+                    break;
+                case 's':
+                    if(bag === 2) {
+                        varRoute = (findNextsIdx(nexts, 'o') < findNextsIdx(nexts, 's', true) || findNextsIdx(nexts, 'o') < findNextsIdx(nexts, 't', true)) ? 'sos' : 'sso'
+                        doHold(true)
+                        if(varRoute === 'sos'){
+                            addQueue('tap', 'rotateOtherclock')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'moveLeft')
+                            addQueue('tap', 'hardDrop')
+                        } else {
+                            addQueue('tap', 'moveRight')
+                            addQueue('tap', 'hardDrop')
+                        }
+                        placedMinos.push('s')
+                        console.log('bag2', placedMinos)
+                    } else if(bag === 3) {
+                        switch(cur){
+                            case 'o':
+                                if(bag < placedCount('o')) return doHold()
+                                if(varRoute === 'sos'){
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('o')
+                                } else {
+                                    if(placedCount('s') > placedCount('o')){
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('o')
+                                    } else {
+                                        doHold()
+                                    }
+                                }
+                                break;
+                            case 'z':
+                                if(bag < placedCount('z')) return doHold()
+                                if(varRoute === 'sos'){
+                                    if(placedCount('j') > placedCount('z')){
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')  
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('z')
+                                    } else {
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('z')
+                                    }
+                                } else {
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    if(placedCount('l') > placedCount('z')){
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'rotateOtherclock')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        addQueue('tap', 'rotateOtherclock')
+                                    }
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('z')
+                                }
+                                break;
+                            case 's':
+                                console.log(bag, placedCount('s'), placedMinos)
+                                if(bag < placedCount('s')) return doHold()
+                                if(varRoute === 'sos'){
+                                    if(placedCount('o') > placedCount('s')){
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('s')
+                                    } else {
+                                        doHold()
+                                    }
+                                } else {
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('s')
+                                }
+                                break;
+                            case 'i':
+                                if(bag < placedCount('i')) return doHold()
+                                if(varRoute === 'sos'){
+                                    addQueue('tap', 'rotateClock')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('i')
+                                } else {
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('i')
+                                }
+                                break;
+                            case 'j':
+                                if(bag < placedCount('j')) return doHold()
+                                if(varRoute === 'sos'){
+                                    addQueue('tap', 'rotateClock')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('j')
+                                } else {
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    if(placedCount('s') > placedCount('j')){
+                                        addQueue('tap', 'moveLeft')
+                                        if(placedCount('i') > placedCount('l')){addQueue('tap', 'rotateClock')}
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        if(placedCount('i') > placedCount('l')){addQueue('tap', 'rotateOtherclock')}
+                                        addQueue('tap', 'moveRight')
+                                    }
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('j')
+                                }
+                                break;
+                            case 'l':
+                                if(bag < placedCount('l')) return doHold()
+                                if(varRoute === 'sos'){
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('l')
+                                } else {
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('l')
+                                }
+                                break;
+                            case 't':
+                                if(bagIndex === 6){
+                                    if(varRoute === 'sos'){
+                                        addQueue('tap', 'rotateOtherclock')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('tap', 'moveRight')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        addQueue('tap', 'rotateOtherclock')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('t')
+                                    } else {
+                                        addQueue('tap', 'rotateOtherclock')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('press', 'softDrop')
+                                        addQueue('release', 'softDrop')
+                                        addQueue('tap', 'rotateOtherclock')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('t')
+                                    }
+                                } else {
+                                    doHold()
+                                }
+                                break;
+                        }
+                    } else if(bag === 4){
+                        switch(cur){
+                            case 'o':
+                                if(bag < placedCount('o')) return doHold()
+                                if(varRoute === 'sos'){
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('o')
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 'j':
+                                if(bag < placedCount('j')) return doHold()
+                                if(varRoute === 'sos'){
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'rotateClock')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('j')
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 'z':
+                                if(bag < placedCount('z')) return doHold()
+                                if(varRoute === 'sos'){
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'moveRight')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('z')
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 't':
+                                if(bag < placedCount('t')) return doHold()
+                                if(varRoute === 'sos'){
+                                    if(placedCount('l') > placedCount('t')){
+                                        if(placedCount('s') > placedCount('t')){
+                                            addQueue('tap', 'rotate180')
+                                            addQueue('tap', 'hardDrop')
+                                            placedMinos.push('t')
+                                        } else {
+                                            doHold()
+                                        }
+                                    } else {
+                                        addQueue('tap', 'moveLeft') 
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('t')
+                                    }
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 'l':
+                                if(bag < placedCount('l')) return doHold()
+                                if(varRoute === 'sos'){
+                                    if(placedCount('t') > placedCount('l')){
+                                        addQueue('tap', 'rotate180')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('l')
+                                    } else {
+                                        addQueue('tap', 'rotateClock')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'moveLeft')
+                                        addQueue('tap', 'hardDrop')
+                                        placedMinos.push('l')
+                                    }
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 's':
+                                if(bag < placedCount('s')) return doHold()
+                                if(varRoute === 'sos'){
+                                    if(placedCount('l') > placedCount('s') || placedCount('t') > placedCount('s')){
+                                        if(firstInLastBag('l', 't') == 'l'){
+                                            addQueue('tap', 'rotateOtherclock')
+                                            addQueue('tap', 'hardDrop')
+                                            placedMinos.push('s')
+                                        } else {
+                                            if(placedCount('s') > placedCount('s')){
+                                                addQueue('tap', 'moveLeft')
+                                                if(placedCount('l') > placedCount('s')){
+                                                    addQueue('tap', 'moveLeft')
+                                                    addQueue('tap', 'rotateClock')
+                                                    addQueue('press', 'softDrop')
+                                                    addQueue('release', 'softDrop')
+                                                    addQueue('tap', 'rotateClock')
+                                                }
+                                                addQueue('tap', 'hardDrop')
+                                                placedMinos.push('s')
+                                            } else {
+                                                doHold()
+                                            }
+                                        }
+                                    } else {
+                                        doHold()
+                                    }
+                                } else {
+                                    //
+                                }
+                                break;
+                            case 'i':
+                                if(bag < placedCount('i')) return doHold()
+                                if(varRoute === 'sos'){
+                                    addQueue('tap', 'rotateOtherclock')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'moveLeft')
+                                    addQueue('tap', 'hardDrop')
+                                    placedMinos.push('i')
+                                } else {
+                                    //
+                                }
+                                break;
+                            }
+                    }
+                    break;
+            }
         }
     }
 
@@ -900,6 +1415,16 @@ function initGame(){
 
     function addQueue(type, keytype){
         actionQueue.push({type:type, keytype:keytype})
+    }
+
+    function firstInLastBag(mino1, mino2){
+        const bag = Math.floor(placedMinos.length / 7)
+        const bagIndex = placedMinos.length % 7
+        const reversed = [...placedMinos].reverse().slice(0, 7-bagIndex)
+        const idx1 = reversed.findIndex(v => v === mino1)
+        const idx2 = reversed.findIndex(v => v === mino2)
+        console.log(idx1, idx2, mino1, mino2)
+        return idx1 > idx2 ? mino1 : mino2
     }
 }
 
